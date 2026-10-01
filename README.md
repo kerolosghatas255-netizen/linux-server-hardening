@@ -257,3 +257,23 @@ linux-server-hardening/
 This repository does not contain private SSH keys, passwords, live backup archives, or other credentials.
 
 The main goal of the project was to configure the server, test the controls, deliberately create a few safe failure cases, and verify that I could detect and recover from them.
+
+## Screenshots
+
+### Project overview
+
+![Linux Server Hardening project overview](screenshots/01-linux-hardening-project-overview.png)
+
+### Security status
+
+![Security status](screenshots/02-security-status-summary.png)
+
+### Server health
+
+![Server health healthy state](screenshots/07-server-health-healthy.png)
+
+### Failure detection test
+
+![Nginx failure detected as critical](screenshots/08-server-health-critical-detection.png)
+
+More validation screenshots are available in the `screenshots` directory.
