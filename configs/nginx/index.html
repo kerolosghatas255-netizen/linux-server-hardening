@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Linux Server Hardening Lab</title>
+
+<style>
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: "Segoe UI", Arial, sans-serif;
+  background: #f2efe8;
+  color: #171717;
+}
+
+.wrapper {
+  max-width: 1180px;
+  margin: auto;
+  padding: 55px 35px 70px;
+}
+
+.hero {
+  display: grid;
+  grid-template-columns: 1.1fr 0.9fr;
+  gap: 55px;
+  align-items: center;
+  margin-bottom: 55px;
+}
+
+.kicker {
+  font-family: monospace;
+  color: #b45309;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  font-weight: 700;
+  margin-bottom: 15px;
+}
+
+h1 {
+  font-size: 62px;
+  line-height: .98;
+  letter-spacing: -2px;
+  margin: 0 0 24px;
+}
+
+.lead {
+  color: #57534e;
+  line-height: 1.75;
+  font-size: 18px;
+}
+
+.terminal {
+  background: #111;
+  color: #d1fae5;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 16px 45px rgba(0,0,0,.18);
+}
+
+.terminal-bar {
+  background: #262626;
+  padding: 11px 15px;
+  display: flex;
+  gap: 7px;
+}
+
+.dot {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+}
+
+.red { background:#ef4444; }
+.yellow { background:#eab308; }
+.green { background:#22c55e; }
+
+.terminal-body {
+  padding: 23px;
+  font-family: Consolas, monospace;
+  font-size: 13px;
+  line-height: 1.85;
+}
+
+.prompt { color:#4ade80; }
+.good { color:#86efac; }
+
+.section-label {
+  margin: 48px 0 17px;
+  font-family: monospace;
+  color: #78716c;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  font-size: 12px;
+}
+
+.phases {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+}
+
+.phase {
+  background: #fffdf8;
+  border: 1px solid #d6d0c5;
+  padding: 25px;
+}
+
+.phase-number {
+  color: #b45309;
+  font-family: monospace;
+  margin-bottom: 8px;
+}
+
+.phase h3 {
+  margin: 0 0 10px;
+  font-size: 22px;
+}
+
+.phase p {
+  color: #6b655e;
+  line-height: 1.65;
+  margin: 0;
+}
+
+.architecture {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  border-top: 1px solid #c8c2b7;
+  border-bottom: 1px solid #c8c2b7;
+}
+
+.step {
+  padding: 22px 18px;
+  border-right: 1px solid #c8c2b7;
+}
+
+.step:last-child {
+  border-right: 0;
+}
+
+.step-num {
+  color: #b45309;
+  font-family: monospace;
+  font-size: 12px;
+}
+
+.step strong {
+  display: block;
+  margin: 9px 0 6px;
+  font-size: 18px;
+}
+
+.step span {
+  color: #6b655e;
+  font-size: 14px;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #fffdf8;
+}
+
+th, td {
+  padding: 16px 18px;
+  border-bottom: 1px solid #ddd7cc;
+  text-align: left;
+}
+
+th {
+  font-family: monospace;
+  color: #78716c;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-size: 12px;
+}
+
+.status {
+  color: #15803d;
+  font-family: monospace;
+  font-weight: bold;
+}
+
+.tools {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+}
+
+.tool {
+  background: #1c1917;
+  color: #fff;
+  padding: 25px;
+  border-left: 5px solid #d97706;
+}
+
+.tool h3 {
+  margin-top: 0;
+}
+
+.tool code {
+  color: #fde68a;
+}
+
+.tool p {
+  color: #d6d3d1;
+  line-height: 1.6;
+}
+
+.footer {
+  margin-top: 35px;
+  color: #78716c;
+  font-family: monospace;
+  font-size: 12px;
+}
+
+@media(max-width:850px) {
+  .hero,
+  .phases,
+  .tools {
+    grid-template-columns: 1fr;
+  }
+
+  .architecture {
+    grid-template-columns: 1fr;
+  }
+
+  .step {
+    border-right: 0;
+    border-bottom: 1px solid #c8c2b7;
+  }
+
+  h1 { font-size: 44px; }
+}
+</style>
+</head>
+
+<body>
+<div class="wrapper">
+
+  <section class="hero">
+
+    <div>
+      <div class="kicker">Infrastructure Security & Operations Lab</div>
+
+      <h1>Linux Server<br>Hardening</h1>
+
+      <div class="lead">
+        A hands-on Linux administration and security project built across two
+        environments: an ESXi-hosted remote lab and a VMware Workstation
+        continuation environment. The project covers secure remote access,
+        firewalling, intrusion protection, web services, automatic security
+        updates, backup automation, logging, and operational monitoring.
+      </div>
+    </div>
+
+    <div class="terminal">
+      <div class="terminal-bar">
+        <div class="dot red"></div>
+        <div class="dot yellow"></div>
+        <div class="dot green"></div>
+      </div>
+
+      <div class="terminal-body">
+        <div>
+          <span class="prompt">kero@linux-hardening-lab-local:~$</span>
+          sudo server-health
+        </div>
+        <br>
+        <div>CPU load ................. <span class="good">HEALTHY</span></div>
+        <div>Memory ................... <span class="good">HEALTHY</span></div>
+        <div>Root disk ................ <span class="good">HEALTHY</span></div>
+        <div>SSH ...................... <span class="good">ACTIVE</span></div>
+        <div>Nginx .................... <span class="good">ACTIVE</span></div>
+        <div>Fail2ban ................. <span class="good">ACTIVE</span></div>
+        <div>Backup timer ............. <span class="good">ACTIVE</span></div>
+        <br>
+        <div>Overall status ........... <span class="good">HEALTHY</span></div>
+      </div>
+    </div>
+
+  </section>
+
+  <div class="section-label">Project Environments</div>
+
+  <section class="phases">
+
+    <div class="phase">
+      <div class="phase-number">PHASE 01</div>
+      <h3>Remote ESXi Lab</h3>
+      <p>
+        Initial hardening and validation were performed on an Ubuntu VM hosted
+        on a separate VMware ESXi hypervisor and administered remotely from a
+        Windows workstation.
+      </p>
+    </div>
+
+    <div class="phase">
+      <div class="phase-number">PHASE 02</div>
+      <h3>VMware Workstation Continuation</h3>
+      <p>
+        The validated configuration was backed up, integrity-checked with
+        SHA-256, restored into a local VMware Workstation environment, and
+        revalidated before additional monitoring work was added.
+      </p>
+    </div>
+
+  </section>
+
+  <div class="section-label">Security Architecture</div>
+
+  <section class="architecture">
+
+    <div class="step">
+      <div class="step-num">01</div>
+      <strong>Windows Admin</strong>
+      <span>Remote management workstation</span>
+    </div>
+
+    <div class="step">
+      <div class="step-num">02</div>
+      <strong>ED25519 SSH</strong>
+      <span>Key-only authentication</span>
+    </div>
+
+    <div class="step">
+      <div class="step-num">03</div>
+      <strong>UFW</strong>
+      <span>Default-deny firewall policy</span>
+    </div>
+
+    <div class="step">
+      <div class="step-num">04</div>
+      <strong>Fail2ban</strong>
+      <span>Dynamic SSH abuse protection</span>
+    </div>
+
+    <div class="step">
+      <div class="step-num">05</div>
+      <strong>Nginx</strong>
+      <span>Restricted HTTP service</span>
+    </div>
+
+  </section>
+
+  <div class="section-label">Validated Controls</div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Control</th>
+        <th>Configuration</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+
+    <tbody>
+      <tr>
+        <td>SSH Authentication</td>
+        <td>ED25519 public key only</td>
+        <td class="status">PASS</td>
+      </tr>
+
+      <tr>
+        <td>Root Remote Login</td>
+        <td>PermitRootLogin no</td>
+        <td class="status">BLOCKED</td>
+      </tr>
+
+      <tr>
+        <td>Password Authentication</td>
+        <td>PasswordAuthentication no</td>
+        <td class="status">BLOCKED</td>
+      </tr>
+
+      <tr>
+        <td>Firewall</td>
+        <td>Default deny incoming</td>
+        <td class="status">ACTIVE</td>
+      </tr>
+
+      <tr>
+        <td>SSH Exposure</td>
+        <td>Management network only</td>
+        <td class="status">RESTRICTED</td>
+      </tr>
+
+      <tr>
+        <td>Intrusion Protection</td>
+        <td>Fail2ban + nftables</td>
+        <td class="status">ACTIVE</td>
+      </tr>
+
+      <tr>
+        <td>HTTP Exposure</td>
+        <td>Lab network only</td>
+        <td class="status">RESTRICTED</td>
+      </tr>
+
+      <tr>
+        <td>Security Updates</td>
+        <td>Unattended security upgrades</td>
+        <td class="status">ENABLED</td>
+      </tr>
+
+      <tr>
+        <td>Backups</td>
+        <td>Daily systemd timer + retention</td>
+        <td class="status">SCHEDULED</td>
+      </tr>
+
+      <tr>
+        <td>Monitoring</td>
+        <td>CPU, RAM, disk, services, backup age</td>
+        <td class="status">HEALTHY</td>
+      </tr>
+
+    </tbody>
+  </table>
+
+  <div class="section-label">Custom Administration Tools</div>
+
+  <section class="tools">
+
+    <div class="tool">
+      <h3>security-status</h3>
+      <p>
+        Custom Bash tool that validates the effective SSH configuration,
+        UFW state, Fail2ban jail, Nginx, automatic security updates,
+        backup scheduling, and exposed TCP ports.
+      </p>
+      <code>sudo security-status</code>
+    </div>
+
+    <div class="tool">
+      <h3>server-health</h3>
+      <p>
+        Operational health tool with thresholds for CPU load, memory usage,
+        disk usage, service availability, backup freshness, and an overall
+        HEALTHY / WARNING / CRITICAL result.
+      </p>
+      <code>sudo server-health</code>
+    </div>
+
+  </section>
+
+  <div class="footer">
+    Linux Server Administration & Security Hardening Portfolio Project
+  </div>
+
+</div>
+</body>
+</html>

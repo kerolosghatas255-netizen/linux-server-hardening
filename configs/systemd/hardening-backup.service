@@ -1,0 +1,8 @@
+[Unit]
+Description=Linux Hardening Configuration Backup
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/hardening-backup
+User=root
+Group=root

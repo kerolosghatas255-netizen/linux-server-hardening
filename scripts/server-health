@@ -1,0 +1,156 @@
+#!/usr/bin/env bash
+
+set -u
+
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+RED='\033[0;31m'
+CYAN='\033[0;36m'
+NC='\033[0m'
+
+OVERALL=0
+
+ok() {
+    printf "%-28s ${GREEN}%s${NC}\n" "$1" "$2"
+}
+
+warn() {
+    printf "%-28s ${YELLOW}%s${NC}\n" "$1" "$2"
+    [ "$OVERALL" -lt 1 ] && OVERALL=1
+}
+
+crit() {
+    printf "%-28s ${RED}%s${NC}\n" "$1" "$2"
+    OVERALL=2
+}
+
+if [ "$EUID" -ne 0 ]; then
+    echo "Run with sudo:"
+    echo "  sudo server-health"
+    exit 1
+fi
+
+echo
+echo -e "${CYAN}Linux Server Health${NC}"
+echo "-----------------------------------------------"
+
+HOSTNAME="$(hostname)"
+UPTIME="$(uptime -p | sed 's/^up //')"
+
+printf "%-28s %s\n" "Hostname" "$HOSTNAME"
+printf "%-28s %s\n" "Uptime" "$UPTIME"
+
+echo
+echo -e "${CYAN}Resource Health${NC}"
+echo "-----------------------------------------------"
+
+CORES="$(nproc)"
+LOAD1="$(awk '{print $1}' /proc/loadavg)"
+
+CPU_STATE="$(awk -v load="$LOAD1" -v cores="$CORES" 'BEGIN {
+    if (load >= cores * 2) print 2;
+    else if (load >= cores) print 1;
+    else print 0;
+}')"
+
+if [ "$CPU_STATE" -eq 0 ]; then
+    ok "CPU load" "$LOAD1 / $CORES cores"
+elif [ "$CPU_STATE" -eq 1 ]; then
+    warn "CPU load" "$LOAD1 / $CORES cores"
+else
+    crit "CPU load" "$LOAD1 / $CORES cores"
+fi
+
+MEM_TOTAL="$(awk '/MemTotal/ {print $2}' /proc/meminfo)"
+MEM_AVAILABLE="$(awk '/MemAvailable/ {print $2}' /proc/meminfo)"
+MEM_USED_PCT=$(( (MEM_TOTAL - MEM_AVAILABLE) * 100 / MEM_TOTAL ))
+
+if [ "$MEM_USED_PCT" -lt 80 ]; then
+    ok "Memory usage" "${MEM_USED_PCT}%"
+elif [ "$MEM_USED_PCT" -lt 90 ]; then
+    warn "Memory usage" "${MEM_USED_PCT}%"
+else
+    crit "Memory usage" "${MEM_USED_PCT}%"
+fi
+
+DISK_USED="$(df -P / | awk 'NR==2 {gsub("%","",$5); print $5}')"
+
+if [ "$DISK_USED" -lt 80 ]; then
+    ok "Root disk usage" "${DISK_USED}%"
+elif [ "$DISK_USED" -lt 90 ]; then
+    warn "Root disk usage" "${DISK_USED}%"
+else
+    crit "Root disk usage" "${DISK_USED}%"
+fi
+
+echo
+echo -e "${CYAN}Service Health${NC}"
+echo "-----------------------------------------------"
+
+for SERVICE in ssh nginx fail2ban; do
+    if systemctl is-active --quiet "$SERVICE"; then
+        ok "$SERVICE" "ACTIVE"
+    else
+        crit "$SERVICE" "INACTIVE"
+    fi
+done
+
+if systemctl is-active --quiet hardening-backup.timer; then
+    ok "Backup timer" "ACTIVE"
+else
+    crit "Backup timer" "INACTIVE"
+fi
+
+echo
+echo -e "${CYAN}Backup Health${NC}"
+echo "-----------------------------------------------"
+
+LATEST_BACKUP="$(find /var/backups/hardening \
+    -maxdepth 1 \
+    -type f \
+    -name 'hardening-*.tar.gz' \
+    -printf '%T@ %p\n' 2>/dev/null \
+    | sort -nr \
+    | head -1 \
+    | cut -d' ' -f2-)"
+
+if [ -n "$LATEST_BACKUP" ]; then
+    BACKUP_EPOCH="$(stat -c %Y "$LATEST_BACKUP")"
+    NOW_EPOCH="$(date +%s)"
+    BACKUP_AGE_HOURS=$(( (NOW_EPOCH - BACKUP_EPOCH) / 3600 ))
+
+    printf "%-28s %s\n" "Latest backup" "$(basename "$LATEST_BACKUP")"
+
+    if [ "$BACKUP_AGE_HOURS" -lt 36 ]; then
+        ok "Backup age" "${BACKUP_AGE_HOURS} hours"
+    elif [ "$BACKUP_AGE_HOURS" -lt 72 ]; then
+        warn "Backup age" "${BACKUP_AGE_HOURS} hours"
+    else
+        crit "Backup age" "${BACKUP_AGE_HOURS} hours"
+    fi
+else
+    crit "Latest backup" "NOT FOUND"
+fi
+
+echo
+echo -e "${CYAN}Listening TCP Ports${NC}"
+echo "-----------------------------------------------"
+
+ss -tlnp | awk 'NR==1 || /:22 |:80 |:443 /'
+
+echo
+echo "-----------------------------------------------"
+
+case "$OVERALL" in
+    0)
+        echo -e "Overall status               ${GREEN}HEALTHY${NC}"
+        ;;
+    1)
+        echo -e "Overall status               ${YELLOW}WARNING${NC}"
+        ;;
+    2)
+        echo -e "Overall status               ${RED}CRITICAL${NC}"
+        ;;
+esac
+
+echo

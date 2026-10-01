@@ -1,0 +1,35 @@
+
+[0;36mLinux Server Health[0m
+-----------------------------------------------
+Hostname                     linux-hardening-lab-local
+Uptime                       28 minutes
+
+[0;36mResource Health[0m
+-----------------------------------------------
+CPU load                     [0;32m0.04 / 2 cores[0m
+Memory usage                 [0;32m29%[0m
+Root disk usage              [0;32m26%[0m
+
+[0;36mService Health[0m
+-----------------------------------------------
+ssh                          [0;32mACTIVE[0m
+nginx                        [0;32mACTIVE[0m
+fail2ban                     [0;32mACTIVE[0m
+Backup timer                 [0;32mACTIVE[0m
+
+[0;36mBackup Health[0m
+-----------------------------------------------
+Latest backup                hardening-2026-10-01_15-34-09.tar.gz
+Backup age                   [0;32m0 hours[0m
+
+[0;36mListening TCP Ports[0m
+-----------------------------------------------
+State  Recv-Q Send-Q Local Address:Port Peer Address:PortProcess                                                                         
+LISTEN 0      4096         0.0.0.0:22        0.0.0.0:*    users:(("sshd",pid=1191,fd=3),("systemd",pid=1,fd=279))                        
+LISTEN 0      511          0.0.0.0:80        0.0.0.0:*    users:(("nginx",pid=4099,fd=5),("nginx",pid=4098,fd=5),("nginx",pid=4097,fd=5))
+LISTEN 0      4096            [::]:22           [::]:*    users:(("sshd",pid=1191,fd=4),("systemd",pid=1,fd=280))                        
+LISTEN 0      511             [::]:80           [::]:*    users:(("nginx",pid=4099,fd=6),("nginx",pid=4098,fd=6),("nginx",pid=4097,fd=6))
+
+-----------------------------------------------
+Overall status               [0;32mHEALTHY[0m
+

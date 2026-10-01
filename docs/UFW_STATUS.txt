@@ -1,0 +1,10 @@
+Status: active
+Logging: on (low)
+Default: deny (incoming), allow (outgoing), disabled (routed)
+New profiles: skip
+
+To                         Action      From
+--                         ------      ----
+22/tcp                     ALLOW IN    192.168.19.0/24            # SSH from VMware NAT LAN
+80/tcp                     ALLOW IN    192.168.19.0/24            # HTTP from VMware NAT LAN
+

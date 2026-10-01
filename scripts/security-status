@@ -1,0 +1,124 @@
+#!/usr/bin/env bash
+
+set -u
+
+GREEN='\033[0;32m'
+RED='\033[0;31m'
+YELLOW='\033[1;33m'
+CYAN='\033[0;36m'
+NC='\033[0m'
+
+ok() {
+    printf "%-32s ${GREEN}%s${NC}\n" "$1" "$2"
+}
+
+warn() {
+    printf "%-32s ${YELLOW}%s${NC}\n" "$1" "$2"
+}
+
+fail() {
+    printf "%-32s ${RED}%s${NC}\n" "$1" "$2"
+}
+
+if [ "$EUID" -ne 0 ]; then
+    echo "Run with sudo:"
+    echo "  sudo security-status"
+    exit 1
+fi
+
+echo
+echo -e "${CYAN}Linux Server Hardening Status${NC}"
+echo "-----------------------------------------------"
+
+SSHD_CONFIG="$(sshd -T 2>/dev/null)"
+
+PUBKEY="$(echo "$SSHD_CONFIG" | awk '$1=="pubkeyauthentication"{print $2}')"
+PASSWORD="$(echo "$SSHD_CONFIG" | awk '$1=="passwordauthentication"{print $2}')"
+ROOTLOGIN="$(echo "$SSHD_CONFIG" | awk '$1=="permitrootlogin"{print $2}')"
+KBD="$(echo "$SSHD_CONFIG" | awk '$1=="kbdinteractiveauthentication"{print $2}')"
+
+if [ "$PUBKEY" = "yes" ] && [ "$PASSWORD" = "no" ]; then
+    ok "SSH key authentication" "PASS"
+else
+    fail "SSH key authentication" "CHECK"
+fi
+
+if [ "$ROOTLOGIN" = "no" ]; then
+    ok "Root SSH login" "DISABLED"
+else
+    fail "Root SSH login" "$ROOTLOGIN"
+fi
+
+if [ "$PASSWORD" = "no" ]; then
+    ok "Password authentication" "DISABLED"
+else
+    fail "Password authentication" "ENABLED"
+fi
+
+if [ "$KBD" = "no" ]; then
+    ok "Keyboard-interactive auth" "DISABLED"
+else
+    warn "Keyboard-interactive auth" "$KBD"
+fi
+
+if ufw status 2>/dev/null | grep -q '^Status: active'; then
+    ok "UFW firewall" "ACTIVE"
+else
+    fail "UFW firewall" "INACTIVE"
+fi
+
+if systemctl is-active --quiet fail2ban; then
+    if fail2ban-client status sshd >/dev/null 2>&1; then
+        ok "Fail2ban sshd jail" "ACTIVE"
+    else
+        warn "Fail2ban sshd jail" "NOT ACTIVE"
+    fi
+else
+    fail "Fail2ban service" "INACTIVE"
+fi
+
+if systemctl is-active --quiet nginx; then
+    ok "Nginx" "RUNNING"
+else
+    fail "Nginx" "INACTIVE"
+fi
+AUTO_UPDATES="$(apt-config dump 2>/dev/null | grep -c 'APT::Periodic::Unattended-Upgrade "1";')"
+SECURITY_ORIGIN="$(apt-config dump 2>/dev/null | grep -c '\${distro_id}:\${distro_codename}-security')"
+
+
+if [ "$AUTO_UPDATES" -gt 0 ] && [ "$SECURITY_ORIGIN" -gt 0 ]; then
+    ok "Automatic security updates" "ENABLED"
+else
+    warn "Automatic security updates" "CHECK"
+fi
+
+if systemctl is-enabled --quiet hardening-backup.timer 2>/dev/null && \
+   systemctl is-active --quiet hardening-backup.timer; then
+    ok "Automated backups" "SCHEDULED"
+else
+    warn "Automated backups" "CHECK"
+fi
+
+LATEST_BACKUP="$(find /var/backups/hardening -maxdepth 1 -type f -name 'hardening-*.tar.gz' -printf '%T@ %f\n' 2>/dev/null | sort -nr | head -1 | cut -d' ' -f2-)"
+
+if [ -n "$LATEST_BACKUP" ]; then
+    ok "Latest backup" "$LATEST_BACKUP"
+else
+    warn "Latest backup" "NOT FOUND"
+fi
+
+echo
+echo
+echo -e "${CYAN}Network Exposure${NC}"
+echo "-----------------------------------------------"
+
+ufw status numbered 2>/dev/null | awk 'NR >= 3'
+
+
+echo
+echo -e "${CYAN}Listening TCP Ports${NC}"
+echo "-----------------------------------------------"
+
+ss -tlnp | awk 'NR==1 || /:22 |:80 |:443 /'
+
+echo

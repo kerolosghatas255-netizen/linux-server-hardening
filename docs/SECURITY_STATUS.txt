@@ -1,0 +1,31 @@
+
+[0;36mLinux Server Hardening Status[0m
+-----------------------------------------------
+SSH key authentication           [0;32mPASS[0m
+Root SSH login                   [0;32mDISABLED[0m
+Password authentication          [0;32mDISABLED[0m
+Keyboard-interactive auth        [0;32mDISABLED[0m
+UFW firewall                     [0;32mACTIVE[0m
+Fail2ban sshd jail               [0;32mACTIVE[0m
+Nginx                            [0;32mRUNNING[0m
+Automatic security updates       [0;32mENABLED[0m
+Automated backups                [0;32mSCHEDULED[0m
+Latest backup                    [0;32mhardening-2026-10-01_15-34-09.tar.gz[0m
+
+
+[0;36mNetwork Exposure[0m
+-----------------------------------------------
+     To                         Action      From
+     --                         ------      ----
+[ 1] 22/tcp                     ALLOW IN    192.168.19.0/24            # SSH from VMware NAT LAN
+[ 2] 80/tcp                     ALLOW IN    192.168.19.0/24            # HTTP from VMware NAT LAN
+
+
+[0;36mListening TCP Ports[0m
+-----------------------------------------------
+State  Recv-Q Send-Q Local Address:Port Peer Address:PortProcess                                                                         
+LISTEN 0      4096         0.0.0.0:22        0.0.0.0:*    users:(("sshd",pid=1191,fd=3),("systemd",pid=1,fd=279))                        
+LISTEN 0      511          0.0.0.0:80        0.0.0.0:*    users:(("nginx",pid=4099,fd=5),("nginx",pid=4098,fd=5),("nginx",pid=4097,fd=5))
+LISTEN 0      4096            [::]:22           [::]:*    users:(("sshd",pid=1191,fd=4),("systemd",pid=1,fd=280))                        
+LISTEN 0      511             [::]:80           [::]:*    users:(("nginx",pid=4099,fd=6),("nginx",pid=4098,fd=6),("nginx",pid=4097,fd=6))
+
